@@ -11,8 +11,8 @@
 //      service_role 키는 절대 넣지 마세요.
 // =====================================================================
 
-const SUPABASE_URL = "여기에_PROJECT_URL_붙여넣기";
-const SUPABASE_ANON_KEY = "여기에_ANON_PUBLIC_KEY_붙여넣기";
+const SUPABASE_URL = "https://euyziucwzwcndemfbedj.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1eXppdWN3endjbmRlbWZiZWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2OTg5MTEsImV4cCI6MjA5NTI3NDkxMX0.jk4tUFiG4D93tklY4GabF8PcZKQAGxI2GkFy5-9LOAg";
 
 // 워크숍 회차/세션을 구분하고 싶을 때 바꿔서 쓰세요.
 // (같은 페이지를 여러 워크숍에서 재사용해도 작품이 섞이지 않습니다.)
