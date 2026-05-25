@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>이미지 갤러리 · 투표</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css"
+/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --bg-deep: #ebe6db;
+    --ink: #1c1a17;
+    --ink-soft: #6b6459;
+    --line: #d8d1c4;
+    --paper: #fffdf8;
+    --accent: #c1452f;
+    --accent-soft: #f3d9d2;
+    --gold: #b08a3e;
+    --like: #d2402c;
+    --shadow: 0 1px 2px rgba(28, 26, 23, 0.06),
+      0 8px 24px rgba(28, 26, 23, 0.08);
+    --radius: 14px;
+    --base: 16px;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-size: var(--base);
+  }
+
+  body {
+    font-family: "Pretendard", -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    background-image: radial-gradient(
+        circle at 12% 18%,
+        rgba(193, 69, 47, 0.05),
+        transparent 42%
+      ),
+      radial-gradient(circle at 88% 8%, rgba(176, 138, 62, 0.06), transparent 40%);
+    color: var(--ink);
+    line-height: 1.6;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- Header ---------- */
+  header.site {
+    text-align: center;
+    padding: 3rem 1.25rem 1.75rem;
+    position: relative;
+  }
+
+  .eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 0.65rem;
+  }
+
+  header.site h1 {
+    font-size: clamp(1.9rem, 5vw, 2.9rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  header.site h1 .thin {
+    font-weight: 300;
+    color: var(--ink-soft);
+  }
+
+  header.site p.sub {
+    margin-top: 0.85rem;
+    color: var(--ink-soft);
+    font-size: 1rem;
+    max-width: 34rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .divider {
+    width: 56px;
+    height: 3px;
+    background: var(--accent);
+    margin: 1.5rem auto 0;
+    border-radius: 2px;
+  }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .stat-pills {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .pill {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.4rem 0.95rem;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: var(--shadow);
+  }
+
+  .pill strong {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .sort-group {
+    display: inline-flex;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.25rem;
+    box-shadow: var(--shadow);
+  }
+
+  .sort-group button {
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink-soft);
+    padding: 0.35rem 0.95rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+
+  .sort-group button.active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  /* ---------- Upload CTA ---------- */
+  .upload-cta {
+    max-width: 1140px;
+    margin: 1.75rem auto 0;
+    padding: 0 1.25rem;
+  }
+
+  .upload-card {
+    background: var(--paper);
+    border: 1.5px dashed var(--line);
+    border-radius: var(--radius);
+    padding: 1.6rem;
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s ease;
+  }
+
+  .upload-card.done {
+    border-style: solid;
+    border-color: var(--accent-soft);
+    background: linear-gradient(0deg, var(--accent-soft), var(--paper));
+  }
+
+  .upload-card .icon {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: grid;
+    place-items: center;
+    font-size: 1.5rem;
+  }
+
+  .upload-card .txt {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .upload-card .txt h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .upload-card .txt p {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    margin-top: 0.15rem;
+  }
+
+  .btn {
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: none;
+    border-radius: 10px;
+    padding: 0.75rem 1.4rem;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.18s ease, opacity 0.18s;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(193, 69, 47, 0.32);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(193, 69, 47, 0.4);
+  }
+
+  .btn-primary:disabled {
+    background: var(--line);
+    color: var(--ink-soft);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+
+  .btn-ghost:hover {
+    background: var(--bg-deep);
+  }
+
+  /* ---------- Gallery ---------- */
+  main {
+    max-width: 1140px;
+    margin: 2rem auto 4rem;
+    padding: 0 1.25rem;
+  }
+
+  .gallery {
+    columns: 3 280px;
+    column-gap: 1.1rem;
+  }
+
+  .card {
+    break-inside: avoid;
+    margin-bottom: 1.1rem;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    animation: rise 0.45s ease both;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 2px 4px rgba(28, 26, 23, 0.08),
+      0 14px 34px rgba(28, 26, 23, 0.13);
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+
+  .card .imgwrap {
+    position: relative;
+    cursor: zoom-in;
+    background: var(--bg-deep);
+  }
+
+  .card .imgwrap img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .card .rank-badge {
+    position: absolute;
+    top: 0.7rem;
+    left: 0.7rem;
+    background: var(--gold);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .card .meta {
+    padding: 0.85rem 1rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+
+  .card .who {
+    min-width: 0;
+  }
+
+  .card .who .name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card .who .time {
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+  }
+
+  .like-btn {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    transition: all 0.16s ease;
+    user-select: none;
+  }
+
+  .like-btn .heart {
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform 0.18s ease;
+  }
+
+  .like-btn:hover {
+    border-color: var(--like);
+    color: var(--like);
+  }
+
+  .like-btn.liked {
+    background: var(--like);
+    border-color: var(--like);
+    color: #fff;
+  }
+
+  .like-btn.pop .heart {
+    animation: pop 0.4s ease;
+  }
+
+  @keyframes pop {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.5); }
+    60% { transform: scale(0.85); }
+    100% { transform: scale(1); }
+  }
+
+  /* ---------- Empty / loading ---------- */
+  .placeholder {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--ink-soft);
+  }
+
+  .placeholder .big {
+    font-size: 2.6rem;
+    opacity: 0.5;
+    margin-bottom: 0.6rem;
+  }
+
+  .spinner {
+    width: 34px;
+    height: 34px;
+    border: 3px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    margin: 0 auto 1rem;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* ---------- Modal (upload + lightbox) ---------- */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 18, 15, 0.62);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    z-index: 50;
+    animation: fade 0.2s ease;
+  }
+
+  .overlay.open {
+    display: flex;
+  }
+
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .modal {
+    background: var(--paper);
+    border-radius: 18px;
+    width: 100%;
+    max-width: 460px;
+    padding: 1.75rem;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    animation: rise 0.3s ease both;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal h2 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    margin-bottom: 0.3rem;
+  }
+
+  .modal .hint {
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .field {
+    margin-bottom: 1.1rem;
+  }
+
+  .field label {
+    display: block;
+    font-weight: 700;
+    font-size: 0.88rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .field input[type="text"] {
+    width: 100%;
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--ink);
+    transition: border-color 0.16s;
+  }
+
+  .field input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .drop {
+    border: 1.5px dashed var(--line);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.16s;
+    color: var(--ink-soft);
+  }
+
+  .drop:hover,
+  .drop.drag {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .drop .big {
+    font-size: 1.8rem;
+  }
+
+  .preview {
+    margin-top: 0.9rem;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    display: none;
+  }
+
+  .preview img {
+    width: 100%;
+    display: block;
+    max-height: 260px;
+    object-fit: contain;
+    background: var(--bg-deep);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.7rem;
+    margin-top: 1.4rem;
+  }
+
+  .modal-actions .btn {
+    flex: 1;
+  }
+
+  .err {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 10px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  /* ---------- Lightbox ---------- */
+  .lightbox-inner {
+    max-width: 92vw;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+  }
+
+  .lightbox-inner img {
+    max-width: 100%;
+    max-height: 78vh;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+
+  .lightbox-cap {
+    color: #fff;
+    text-align: center;
+  }
+
+  .lightbox-cap .name {
+    font-weight: 700;
+    font-size: 1.1rem;
+  }
+
+  .close-x {
+    position: absolute;
+    top: 1.1rem;
+    right: 1.3rem;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.3rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.8rem 1.3rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 80;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast.error {
+    background: var(--accent);
+  }
+
+  .config-warn {
+    max-width: 1140px;
+    margin: 0 auto 1rem;
+    padding: 0 1.25rem;
+  }
+
+  .config-warn .inner {
+    background: #fff7e6;
+    border: 1px solid #f0d699;
+    color: #8a6d1f;
+    border-radius: 12px;
+    padding: 0.9rem 1.1rem;
+    font-size: 0.88rem;
+  }
+
+  @media (max-width: 600px) {
+    :root {
+      --base: 15px;
+    }
+    header.site {
+      padding-top: 2rem;
+    }
+    .upload-card {
+      flex-direction: column;
+      text-align: center;
+    }
+    .toolbar {
+      justify-content: center;
+    }
+  }
+</style>
+</head>
+<body>
+  <header class="site">
+    <div class="eyebrow">Workshop Gallery</div>
+    <h1>우리의 <span class="thin">이미지 전시관</span></h1>
+    <p class="sub">
+      각자 만든 이미지를 한 점씩 올리고, 마음에 드는 작품에 자유롭게
+      좋아요를 눌러 보세요.
+    </p>
+    <div class="divider"></div>
+  </header>
+
+  <div id="configWarn" class="config-warn" style="display: none">
+    <div class="inner">
+      ⚙️ <strong>설정 필요:</strong> Supabase 연결 정보가 입력되지 않았습니다.
+      <code>config.js</code> 파일의 URL과 KEY를 채워 주세요. (자세한 방법은
+      <code>SETUP.md</code> 참고)
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="stat-pills">
+      <span class="pill">🖼 <strong id="statCount">0</strong> 작품</span>
+      <span class="pill">❤️ <strong id="statLikes">0</strong> 좋아요</span>
+    </div>
+    <div class="sort-group">
+      <button data-sort="new" class="active">최신순</button>
+      <button data-sort="top">인기순</button>
+    </div>
+  </div>
+
+  <div class="upload-cta">
+    <div class="upload-card" id="uploadCard">
+      <div class="icon">📤</div>
+      <div class="txt">
+        <h3 id="uploadCardTitle">내 작품 올리기</h3>
+        <p id="uploadCardDesc">1인당 한 점만 올릴 수 있어요.</p>
+      </div>
+      <button class="btn btn-primary" id="openUploadBtn">업로드</button>
+    </div>
+  </div>
+
+  <main>
+    <div id="galleryState" class="placeholder">
+      <div class="spinner"></div>
+      불러오는 중…
+    </div>
+    <div class="gallery" id="gallery"></div>
+  </main>
+
+  <!-- Upload modal -->
+  <div class="overlay" id="uploadOverlay">
+    <div class="modal">
+      <h2>작품 올리기</h2>
+      <p class="hint">이미지 1장을 올려 주세요. (익명으로 전시됩니다)</p>
+      <div class="err" id="uploadErr"></div>
+      <div class="field">
+        <label>이미지</label>
+        <div class="drop" id="dropZone">
+          <div class="big">🖼</div>
+          <div>클릭하거나 이미지를 끌어다 놓으세요</div>
+          <div style="font-size: 0.78rem; margin-top: 0.3rem">
+            JPG · PNG · WEBP · 최대 8MB
+          </div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" hidden />
+        <div class="preview" id="preview"><img id="previewImg" alt="" /></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancelUploadBtn">취소</button>
+        <button class="btn btn-primary" id="submitUploadBtn" disabled>
+          올리기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="overlay" id="lightboxOverlay">
+    <button class="close-x" id="lightboxClose">×</button>
+    <div class="lightbox-inner">
+      <img id="lightboxImg" alt="" />
+      <div class="lightbox-cap">
+        <div class="name" id="lightboxName"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
