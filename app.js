@@ -64,9 +64,14 @@
       localStorage.setItem("gallery_uploaded_" + ROOM_ID, "1");
     } catch (e) {}
   }
+  function clearUploaded() {
+    try {
+      localStorage.removeItem("gallery_uploaded_" + ROOM_ID);
+    } catch (e) {}
+  }
 
   /* ---------- 2. 상태 ---------- */
-  let artworks = []; // {id, image_url, created_at, like_count}
+  let artworks = []; // {id, title, image_url, storage_path, created_at, like_count, uploader_id}
   let myLikes = new Set(); // 내가 좋아요 누른 artwork id
   let sortMode = "new";
   let selectedFile = null;
@@ -124,7 +129,7 @@
       const [artRes, likeRes] = await Promise.allSettled([
         supabase
           .from(TABLE)
-          .select("id, image_url, created_at, like_count")
+          .select("id, title, image_url, storage_path, uploader_id, created_at, like_count")
           .eq("room_id", ROOM_ID)
           .order("created_at", { ascending: false }),
         supabase
@@ -206,19 +211,29 @@
       .map((a, i) => {
         const liked = myLikes.has(a.id);
         const num = numberMap[a.id] || "?";
+        const isMine = a.uploader_id === VOTER_ID;
+        const title = a.title && a.title.trim() ? a.title : "작품 #" + num;
         const rank =
           sortMode === "top" && (a.like_count || 0) > 0 && i < 3
             ? `<div class="rank-badge">🏆 ${i + 1}위</div>`
             : "";
+        const mineBadge = isMine ? `<div class="mine-badge">내 작품</div>` : "";
+        const delBtn = isMine
+          ? `<button class="delete-btn" data-action="delete" data-id="${a.id}" title="내 작품 삭제" aria-label="내 작품 삭제">✕</button>`
+          : "";
         return `
-        <article class="card" data-id="${a.id}">
+        <article class="card ${isMine ? "mine" : ""}" data-id="${a.id}">
           <div class="imgwrap" data-action="zoom" data-id="${a.id}">
             ${rank}
-            <img src="${escapeHtml(a.image_url)}" alt="작품 ${num}번" loading="lazy" />
+            ${mineBadge}
+            ${delBtn}
+            <img src="${escapeHtml(a.image_url)}" alt="${escapeHtml(
+          title
+        )}" loading="lazy" />
           </div>
           <div class="meta">
             <div class="who">
-              <div class="name">작품 #${num}</div>
+              <div class="title">${escapeHtml(title)}</div>
               <div class="time">${timeAgo(a.created_at)}</div>
             </div>
             <button class="like-btn ${liked ? "liked" : ""}"
@@ -324,10 +339,12 @@
       return;
     }
     $("uploadErr").style.display = "none";
+    $("titleInput").value = "";
     selectedFile = null;
     $("preview").style.display = "none";
     $("submitUploadBtn").disabled = true;
     uploadOverlay.classList.add("open");
+    $("titleInput").focus();
   }
   function closeUpload() {
     uploadOverlay.classList.remove("open");
@@ -361,11 +378,13 @@
   }
 
   function validateForm() {
-    $("submitUploadBtn").disabled = !selectedFile;
+    const ok = selectedFile && $("titleInput").value.trim().length > 0;
+    $("submitUploadBtn").disabled = !ok;
   }
 
   async function submitUpload() {
-    if (!selectedFile) return;
+    const title = $("titleInput").value.trim();
+    if (!selectedFile || !title) return;
     if (hasUploaded()) {
       closeUpload();
       toast("이미 작품을 올리셨어요.");
@@ -402,6 +421,7 @@
       const { data: inserted, error: insErr } = await supabase
         .from(TABLE)
         .insert({
+          title: title,
           image_url: imageUrl,
           storage_path: path,
           room_id: ROOM_ID,
@@ -435,13 +455,75 @@
     }
   }
 
+  /* ---------- 8b. 내 작품 삭제 (교체용) ---------- */
+  let deleteBusy = false;
+  async function deleteArtwork(id) {
+    if (!supabase || deleteBusy) return;
+    const art = artworks.find((a) => a.id === id);
+    if (!art) return;
+    // 본인 작품만 삭제 가능
+    if (art.uploader_id !== VOTER_ID) {
+      toast("내 작품만 삭제할 수 있어요.", true);
+      return;
+    }
+
+    const ok = window.confirm(
+      "내 작품을 삭제할까요?\n삭제하면 받은 좋아요도 사라지고, 새 작품을 다시 올릴 수 있어요."
+    );
+    if (!ok) return;
+
+    deleteBusy = true;
+    try {
+      // 1) Storage 이미지 파일 삭제 (실패해도 계속 진행)
+      if (art.storage_path) {
+        const { error: rmErr } = await supabase.storage
+          .from(BUCKET)
+          .remove([art.storage_path]);
+        if (rmErr) console.warn("이미지 파일 삭제 경고:", rmErr);
+      }
+
+      // 2) DB 레코드 삭제 (likes는 on delete cascade로 자동 정리)
+      const { error: delErr } = await supabase
+        .from(TABLE)
+        .delete()
+        .eq("id", id)
+        .eq("uploader_id", VOTER_ID);
+      if (delErr) throw delErr;
+
+      // 3) 로컬 상태 갱신 + 업로드 제한 해제
+      artworks = artworks.filter((a) => a.id !== id);
+      myLikes.delete(id);
+      clearUploaded();
+      resetUploadCard();
+      render();
+      toast("작품을 삭제했어요. 새 작품을 올릴 수 있어요.");
+    } catch (e) {
+      console.error("삭제 실패:", e);
+      toast("삭제에 실패했어요. 잠시 후 다시 시도해 주세요.", true);
+    } finally {
+      deleteBusy = false;
+    }
+  }
+
+  // 업로드 카드 안내문구를 초기 상태로 되돌림
+  function resetUploadCard() {
+    $("uploadCard").classList.remove("done");
+    $("uploadCardTitle").textContent = "내 작품 올리기";
+    $("uploadCardDesc").textContent = "1인당 한 점만 올릴 수 있어요.";
+    $("openUploadBtn").textContent = "업로드";
+  }
+
   /* ---------- 9. 라이트박스 ---------- */
   const lightboxOverlay = $("lightboxOverlay");
   function openLightbox(id) {
     const art = artworks.find((a) => a.id === id);
     if (!art) return;
     $("lightboxImg").src = art.image_url;
-    $("lightboxName").textContent = "작품 #" + (numberMap[id] || "?");
+    const title =
+      art.title && art.title.trim()
+        ? art.title
+        : "작품 #" + (numberMap[id] || "?");
+    $("lightboxName").textContent = title;
     lightboxOverlay.classList.add("open");
   }
   function closeLightbox() {
@@ -472,7 +554,13 @@
               render();
             }
           } else if (payload.eventType === "DELETE") {
+            const removed = artworks.find((x) => x.id === payload.old.id);
             artworks = artworks.filter((x) => x.id !== payload.old.id);
+            // 내가 올린 작품이 삭제된 경우 업로드 제한 해제
+            if (removed && removed.uploader_id === VOTER_ID) {
+              clearUploaded();
+              resetUploadCard();
+            }
             render();
           }
         }
@@ -488,6 +576,10 @@
     });
     $("cancelUploadBtn").addEventListener("click", closeUpload);
     $("submitUploadBtn").addEventListener("click", submitUpload);
+    $("titleInput").addEventListener("input", validateForm);
+    $("titleInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !$("submitUploadBtn").disabled) submitUpload();
+    });
 
     uploadOverlay.addEventListener("click", (e) => {
       if (e.target === uploadOverlay) closeUpload();
@@ -516,6 +608,12 @@
 
     // 갤러리 위임 클릭
     galleryEl.addEventListener("click", (e) => {
+      const delBtn = e.target.closest('[data-action="delete"]');
+      if (delBtn) {
+        e.stopPropagation();
+        deleteArtwork(delBtn.dataset.id);
+        return;
+      }
       const likeBtn = e.target.closest('[data-action="like"]');
       if (likeBtn) {
         toggleLike(likeBtn.dataset.id, likeBtn);

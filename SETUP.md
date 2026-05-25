@@ -42,6 +42,7 @@
 -- 작품 테이블
 create table public.artworks (
   id           uuid primary key default gen_random_uuid(),
+  title        text,
   image_url    text not null,
   storage_path text,
   room_id      text not null default 'default',
@@ -74,6 +75,7 @@ alter table public.likes    enable row level security;
 create policy "read artworks"   on public.artworks for select using (true);
 create policy "insert artworks" on public.artworks for insert with check (true);
 create policy "update artworks" on public.artworks for update using (true);
+create policy "delete artworks" on public.artworks for delete using (true);
 
 create policy "read likes"   on public.likes for select using (true);
 create policy "insert likes" on public.likes for insert with check (true);
@@ -102,6 +104,10 @@ create policy "public read gallery"
 create policy "public upload gallery"
   on storage.objects for insert
   with check ( bucket_id = 'gallery' );
+
+create policy "public delete gallery"
+  on storage.objects for delete
+  using ( bucket_id = 'gallery' );
 ```
 
 ---
@@ -166,8 +172,11 @@ const ROOM_ID = "default";                              // 회차 구분 시 변
 
 ## 참고: 동작 정책 요약
 
-- **업로드:** 1인(1기기) 1작품. 브라우저에 기록되어 중복 업로드 차단.
+- **업로드:** 1인(1기기) 1작품. 작품명 + 이미지. 브라우저에 기록되어
+  중복 업로드 차단.
+- **작품 교체:** 내가 올린 작품에는 "내 작품" 배지와 삭제(✕) 버튼이
+  표시됩니다. 삭제하면 새 작품을 다시 올릴 수 있습니다.
 - **좋아요:** 1인이 여러 작품에 자유롭게(작품당 1회, 토글로 취소 가능).
-- **익명:** 업로더 이름을 받지 않습니다. 작품은 업로드 순서대로
-  "작품 #1, #2 …"로 표시되어 공정하게 투표할 수 있습니다.
-- **실시간:** 새 작품/좋아요가 모든 화면에 자동 반영.
+- **익명:** 업로더 이름은 받지 않습니다. 작품명만 표시되어 공정하게
+  투표할 수 있습니다. (작품명을 안 적으면 "작품 #번호"로 표시)
+- **실시간:** 새 작품/좋아요/삭제가 모든 화면에 자동 반영.

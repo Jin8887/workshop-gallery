@@ -381,6 +381,63 @@
     animation: pop 0.4s ease;
   }
 
+  .card .title {
+    font-weight: 700;
+    font-size: 0.98rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card .delete-btn {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.7rem;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(20, 18, 15, 0.55);
+    color: #fff;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+    transition: background 0.16s ease;
+    z-index: 2;
+  }
+
+  .card .delete-btn:hover {
+    background: var(--accent);
+  }
+
+  .card.mine .delete-btn {
+    display: flex;
+  }
+
+  .card.mine {
+    outline: 2px solid var(--accent-soft);
+    outline-offset: -2px;
+  }
+
+  .mine-badge {
+    position: absolute;
+    top: 0.7rem;
+    left: 0.7rem;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    z-index: 2;
+  }
+
   @keyframes pop {
     0% { transform: scale(1); }
     35% { transform: scale(1.5); }
@@ -706,8 +763,18 @@
   <div class="overlay" id="uploadOverlay">
     <div class="modal">
       <h2>작품 올리기</h2>
-      <p class="hint">이미지 1장을 올려 주세요. (익명으로 전시됩니다)</p>
+      <p class="hint">작품명과 이미지를 올려 주세요. (익명으로 전시됩니다)</p>
       <div class="err" id="uploadErr"></div>
+      <div class="field">
+        <label for="titleInput">작품명</label>
+        <input
+          type="text"
+          id="titleInput"
+          maxlength="40"
+          placeholder="예: 고요한 아침"
+          autocomplete="off"
+        />
+      </div>
       <div class="field">
         <label>이미지</label>
         <div class="drop" id="dropZone">
