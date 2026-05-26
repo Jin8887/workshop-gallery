@@ -29,6 +29,7 @@
   const LIKES_TABLE = "likes";
   const MAX_BYTES = 8 * 1024 * 1024; // 8MB
   const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  const MAX_VOTES = 2; // 1인당 좋아요(투표) 최대 개수
 
   /* ---------- 1. 브라우저 식별자 (익명, 한 사람 = 한 기기) ---------- */
   function getVoterId() {
@@ -181,6 +182,17 @@
     $("statCount").textContent = artworks.length;
     $("statLikes").textContent = totalLikes;
 
+    // 내 남은 좋아요 표시
+    const myVotesEl = $("myVotes");
+    if (myVotesEl) {
+      myVotesEl.textContent = myLikes.size;
+      $("maxVotes").textContent = MAX_VOTES;
+      const minePill = myVotesEl.closest(".pill-mine");
+      if (minePill) {
+        minePill.classList.toggle("full", myLikes.size >= MAX_VOTES);
+      }
+    }
+
     // 업로드 카드 상태
     if (hasUploaded()) {
       $("uploadCard").classList.add("done");
@@ -215,6 +227,7 @@
     galleryEl.innerHTML = list
       .map((a, i) => {
         const liked = myLikes.has(a.id);
+        const atLimit = !liked && myLikes.size >= MAX_VOTES;
         const num = numberMap[a.id] || "?";
         const isMine = a.uploader_id === VOTER_ID;
         const title = a.title && a.title.trim() ? a.title : "작품 #" + num;
@@ -241,7 +254,9 @@
               <div class="title">${escapeHtml(title)}</div>
               <div class="time">${timeAgo(a.created_at)}</div>
             </div>
-            <button class="like-btn ${liked ? "liked" : ""}"
+            <button class="like-btn ${liked ? "liked" : ""} ${
+          atLimit ? "atlimit" : ""
+        }"
               data-action="like" data-id="${a.id}"
               aria-pressed="${liked}">
               <span class="heart">${liked ? "❤️" : "🤍"}</span>
@@ -265,6 +280,16 @@
       return;
     }
     const wasLiked = myLikes.has(id);
+
+    // 새로 누르는 경우(취소가 아닐 때) 투표 한도 검사
+    if (!wasLiked && myLikes.size >= MAX_VOTES) {
+      likeBusy.delete(id);
+      toast(
+        `좋아요는 1인당 ${MAX_VOTES}개까지예요. 다른 작품의 좋아요를 취소하면 다시 누를 수 있어요.`,
+        true
+      );
+      return;
+    }
 
     // 낙관적 UI
     if (wasLiked) {
