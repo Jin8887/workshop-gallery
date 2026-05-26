@@ -122,6 +122,11 @@
       .replace(/'/g, "&#39;");
   }
 
+  // 모달 열렸을 때 배경 스크롤 잠금 (모바일 대응)
+  function lockScroll(lock) {
+    document.body.style.overflow = lock ? "hidden" : "";
+  }
+
   /* ---------- 5. 데이터 로드 ---------- */
   async function loadAll() {
     if (!supabase) return;
@@ -344,10 +349,12 @@
     $("preview").style.display = "none";
     $("submitUploadBtn").disabled = true;
     uploadOverlay.classList.add("open");
+    lockScroll(true);
     $("titleInput").focus();
   }
   function closeUpload() {
     uploadOverlay.classList.remove("open");
+    lockScroll(false);
   }
 
   function pickFile(file) {
@@ -525,9 +532,11 @@
         : "작품 #" + (numberMap[id] || "?");
     $("lightboxName").textContent = title;
     lightboxOverlay.classList.add("open");
+    lockScroll(true);
   }
   function closeLightbox() {
     lightboxOverlay.classList.remove("open");
+    lockScroll(false);
     $("lightboxImg").src = "";
   }
 
