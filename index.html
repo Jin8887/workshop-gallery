@@ -140,6 +140,26 @@
     font-weight: 700;
   }
 
+  .pill-mine {
+    background: var(--accent-soft);
+    border-color: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .pill-mine strong {
+    color: var(--accent);
+  }
+
+  .pill-mine.full {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .pill-mine.full strong {
+    color: #fff;
+  }
+
   .sort-group {
     display: inline-flex;
     background: var(--paper);
@@ -394,6 +414,10 @@
 
   .like-btn:active {
     transform: scale(0.92);
+  }
+
+  .like-btn.atlimit {
+    opacity: 0.4;
   }
 
   .like-btn.liked {
@@ -917,6 +941,7 @@
     <div class="stat-pills">
       <span class="pill">🖼 <strong id="statCount">0</strong> 작품</span>
       <span class="pill">❤️ <strong id="statLikes">0</strong> 좋아요</span>
+      <span class="pill pill-mine">🗳 내 좋아요 <strong id="myVotes">0</strong>/<span id="maxVotes">2</span></span>
     </div>
     <div class="sort-group">
       <button data-sort="new" class="active">최신순</button>
